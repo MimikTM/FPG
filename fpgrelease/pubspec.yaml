@@ -1,0 +1,48 @@
+name: fpg
+description: Football Player Growth Game
+
+publish_to: 'none'
+
+version: 0.9.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  shared_preferences: ^2.2.2
+  # Brakowało tej zależności, mimo że save_manager.dart jej używa —
+  # bez niej build w ogóle by się nie powiódł (pakiet nieznaleziony).
+  path_provider: ^2.1.4
+  audioplayers: ^6.5.0
+  # Real-time 2D rendering for the match pitch (smooth animated player/ball
+  # movement instead of the old CustomPainter that just teleported dots
+  # between simulation ticks). Pure presentation layer — does not touch
+  # match simulation logic.
+  flame: ^1.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  # Generuje prawdziwą ikonę aplikacji (mipmapy Android) z assets/fpg_logo.png
+  # zamiast domyślnej ikony Fluttera. Uruchamiane w CI przed buildem APK.
+  flutter_launcher_icons: ^0.14.3
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/fpg_logo.png
+    - assets/audio/music/
+    - assets/audio/sfx/
+
+flutter_launcher_icons:
+  android: true
+  image_path: "assets/fpg_logo.png"
+  # Logo ma przezroczyste/czarne tło z neonową obwódką — adaptive icon
+  # z czarnym tłem, żeby na launcherze nie robił się biały kwadrat.
+  adaptive_icon_background: "#0A0A14"
+  adaptive_icon_foreground: "assets/fpg_logo.png"
+  min_sdk_android: 21
