@@ -10,6 +10,10 @@ jobs:
   build:
     runs-on: ubuntu-24.04
 
+    defaults:
+      run:
+        working-directory: fpgrelease
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,22 +37,20 @@ jobs:
       - name: Create Android platform
         run: |
           if [ ! -d "android" ]; then
-            echo "Android folder does not exist."
-            echo "Creating Android project..."
-
             flutter create \
               --platforms=android \
               --project-name=fpg \
               --org=com.fpg \
               .
-
-            echo "Android project created."
           else
             echo "Android folder already exists."
           fi
 
       - name: Get dependencies
         run: flutter pub get
+
+      - name: Generate launcher icons
+        run: dart run flutter_launcher_icons
 
       - name: Build APK
         run: flutter build apk --release
@@ -60,12 +62,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: FPG-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: fpgrelease/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
           name: FPG-AAB
-          path: build/app/outputs/bundle/release/app-release.aab
+          path: fpgrelease/build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
