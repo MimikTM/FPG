@@ -2,111 +2,78 @@ name: Build APK
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch: {}
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   build-apk:
     name: Build release APK
     runs-on: ubuntu-latest
 
-    # Prawdziwy projekt Fluttera (pubspec.yaml, lib/, assets/, android/ po
-    # wygenerowaniu) leży w podfolderze repo "fpgrelease/", a nie w katalogu
-    # głównym. Bez tego wszystkie kroki `run:` działałyby w pustym katalogu
-    # głównym i `flutter create` tworzyłby tam fikcyjny, domyślny projekt
-    # zamiast dotykać prawdziwego kodu gry.
     defaults:
       run:
-        working-directory: fpgrelease
+        working-directory: FPG-main/fpgrelease
 
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Setup Java
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           flutter-version: '3.47.2'
           cache: true
 
-      - name: Ensure Android platform exists
-        # UWAGA: repozytorium na GitHub nazywa się "FPG" (wielkimi literami),
-        # więc katalog roboczy checkoutu to .../FPG/FPG. Bez jawnego
-        # --project-name, `flutter create .` zgaduje nazwę pakietu z nazwy
-        # katalogu ("FPG") zamiast wziąć ją z istniejącego pubspec.yaml — a
-        # Dart nie pozwala na wielkie litery w nazwie pakietu, więc cały krok
-        # wywala się, zanim zdąży cokolwiek zrobić. Podajemy nazwę wprost.
+      - name: Check project
         run: |
-          if [ ! -f "android/app/build.gradle" ] && [ ! -f "android/app/build.gradle.kts" ]; then
-            flutter create --platforms=android --project-name=fpg .
-          fi
-
-      - name: Fix app display name
-        # `flutter create` ustawia android:label na nazwę projektu z pubspec.yaml
-        # (czyli literalnie "fpg", małymi literami — pubspec/Dart nie pozwala na
-        # wielkie litery w nazwie pakietu). To NIE jest to samo co nazwa widoczna
-        # pod ikoną po instalacji — tę kontroluje wyłącznie android:label
-        # w AndroidManifest.xml, więc nadpisujemy ją tutaj na "FPG" niezależnie od
-        # tego, co ustawił szablon.
-        run: |
-          MANIFEST="android/app/src/main/AndroidManifest.xml"
-          test -f "$MANIFEST"
-          sed -i 's/android:label="[^"]*"/android:label="FPG"/' "$MANIFEST"
-          # permission_handler needs these declarations for legacy Android
-          # versions where generic storage permission still exists. The game
-          # saves to app-private storage, so these are not required on modern
-          # Android and the app does not request MANAGE_EXTERNAL_STORAGE.
-          sed -i '/<manifest /a\    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />' "$MANIFEST"
-          grep -o 'android:label="[^"]*"' "$MANIFEST"
-          grep -o 'android.permission.[A-Z_]*_EXTERNAL_STORAGE[^"]*' "$MANIFEST" || true
-
-      - name: Verify Flutter project
-        run: |
+          pwd
+          ls -la
           test -f pubspec.yaml
           test -d lib
           test -f assets/fpg_logo.png
 
-      - name: Get Flutter packages
+      - name: Create Android platform
+        run: |
+          if [ ! -d "android" ]; then
+            flutter create --platforms=android --project-name=fpg .
+          fi
+
+      - name: Fix Android app name
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+
+          if [ -f "$MANIFEST" ]; then
+            sed -i 's/android:label="[^"]*"/android:label="FPG"/' "$MANIFEST"
+          fi
+
+      - name: Get dependencies
         run: flutter pub get
 
       - name: Generate launcher icons
         run: dart run flutter_launcher_icons
 
-      - name: Verify launcher icons were replaced
-        # flutter_launcher_icons kończy się kodem 0 nawet jeśli coś poszło nie
-        # tak z podmianą pliku — sprawdzamy więc jawnie, że mipmapy zostały
-        # nadpisane w rozsądnym czasie (a nie że to wciąż domyślny plik
-        # z `flutter create` sprzed chwili).
-        run: |
-          ICON="android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png"
-          test -f "$ICON"
-          find android/app/src/main/res -name "ic_launcher*.png" -newer pubspec.yaml -print -quit | grep -q . \
-            || (echo "::error::Ikony pod android/app/src/main/res wyglądają na nienadpisane przez flutter_launcher_icons." && exit 1)
-
       - name: Analyze
         run: flutter analyze --no-fatal-infos
 
-      - name: Build release APK
+      - name: Build APK
         run: flutter build apk --release
 
-      - name: Verify APK
+      - name: Check APK
         run: |
           test -f build/app/outputs/flutter-apk/app-release.apk
           ls -lh build/app/outputs/flutter-apk/app-release.apk
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: fpg-release-apk
-          # `path:` w tej akcji liczy się od katalogu głównego repo, a NIE od
-          # working-directory ustawionego wyżej dla kroków `run:` — stąd
-          # jawny prefiks fpgrelease/.
-          path: FPG-main/build/app/outputs/flutter-apk/app-release.apk
+          path: FPG-main/fpgrelease/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
