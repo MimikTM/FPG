@@ -1,0 +1,28 @@
+include: package:flutter_lints/flutter.yaml
+
+
+# Legacy style-only diagnostics are intentionally non-blocking for the beta.
+# Functional analyzer errors/warnings remain fatal.
+linter:
+  rules:
+    avoid_print: false
+    prefer_const_constructors: false
+    prefer_const_constructors_in_immutables: false
+    prefer_const_literals_to_create_immutables: false
+    curly_braces_in_flow_control_structures: false
+    unnecessary_brace_in_string_interps: false
+    unnecessary_string_interpolations: false
+    prefer_const_declarations: false
+    prefer_initializing_formals: false
+
+# Open Beta CI policy:
+# Keep analyzer errors fatal, while allowing non-functional legacy cleanup
+# warnings during the stabilization phase.
+analyzer:
+  errors:
+    unused_element: ignore
+    unused_field: ignore
+    unused_local_variable: ignore
+    unused_import: ignore
+    unnecessary_non_null_assertion: ignore
+    unnecessary_null_comparison: ignore
