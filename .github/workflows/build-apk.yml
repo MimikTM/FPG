@@ -108,5 +108,5 @@ jobs:
           # `path:` w tej akcji liczy się od katalogu głównego repo, a NIE od
           # working-directory ustawionego wyżej dla kroków `run:` — stąd
           # jawny prefiks fpgrelease/.
-          path: fpgrelease/build/app/outputs/flutter-apk/app-release.apk
+          path: FPG-main/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
