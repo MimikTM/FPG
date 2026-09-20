@@ -1,0 +1,80 @@
+name: Build APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    name: Build release APK
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: fpgrelease
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.2'
+          cache: true
+
+      - name: Check project
+        run: |
+          pwd
+          ls -la
+          test -f pubspec.yaml
+          test -d lib
+          test -f assets/fpg_logo.png
+
+      - name: Create Android platform
+        run: |
+          if [ ! -d "android" ]; then
+            flutter create --platforms=android --project-name=fpg .
+          fi
+
+      - name: Fix Android app name
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+
+          if [ -f "$MANIFEST" ]; then
+            sed -i 's/android:label="[^"]*"/android:label="FPG"/' "$MANIFEST"
+          fi
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Generate launcher icons
+        run: dart run flutter_launcher_icons
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Check APK
+        run: |
+          test -f build/app/outputs/flutter-apk/app-release.apk
+          ls -lh build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: fpg-release-apk
+          path: fpgrelease/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          
